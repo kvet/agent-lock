@@ -16,19 +16,36 @@ queued:  pid=4203 shared since 14:02:55 in /Users/me/proj-c: pnpm check
 
 ## Install
 
+Requires macOS 13 or later and the Xcode Command Line Tools (`xcode-select --install`). Full Xcode is not needed.
+
+### Homebrew (recommended)
+
+> The `kvet/homebrew-tap` tap is not published yet. Until it is, use [From source](#from-source).
+
 ```sh
 brew install kvet/tap/agent-lock
-brew services start agent-lock      # menu bar item, now and at login
+brew services start agent-lock      # menu bar item, now and at every login
 ```
 
-It builds from source, so it needs only the Xcode Command Line Tools (`xcode-select --install`). macOS 13 or later.
+Homebrew builds `agent-lock` on your machine, so there are no Gatekeeper prompts. To update, run `brew upgrade agent-lock`, then `brew services restart agent-lock`. To remove it, run `brew services stop agent-lock` and then `brew uninstall agent-lock`.
 
 ### From source
 
 ```sh
+git clone https://github.com/kvet/agent-lock
+cd agent-lock
 swift build -c release
-cp .build/release/agent-lock ~/.local/bin/    # or anywhere on your PATH
+cp .build/release/agent-lock /usr/local/bin/   # or anywhere on your PATH
+agent-lock version
 ```
+
+Start the menu bar app with `agent-lock menubar &`. Started this way, it does not come back after a logout. To update, run `git pull`, rebuild and copy again. Copying replaces the binary in a single step, so agents that are running at the time are not affected.
+
+### Set up your agents
+
+Installing `agent-lock` doesn't change anything until your agents use it. Paste the [agent instructions](#agent-instructions) into your `CLAUDE.md` or `AGENTS.md`.
+
+If you used the older Perl `agent-lock` script, replace it (for example at `~/.claude/bin/agent-lock`) with the new binary, or point your instructions at plain `agent-lock`. Both versions use the same state directory, so they can run side by side while you switch.
 
 ## Usage
 

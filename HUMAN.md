@@ -69,4 +69,5 @@ Things to check by hand:
 4. In the tap, run `brew install --build-from-source ./Formula/agent-lock.rb && brew test agent-lock`, then commit and push.
 5. On a clean machine, or after `brew uninstall agent-lock`: run `brew install kvet/tap/agent-lock` and `brew services start agent-lock`, and check that the status item appears.
 6. Point the symlink at the Homebrew copy instead of your local build. Agents call `~/.claude/bin/agent-lock` today, so either keep a symlink there (`ln -sf "$(brew --prefix)/bin/agent-lock" ~/.claude/bin/agent-lock`) or change your CLAUDE.md to call plain `agent-lock`.
-7. Tell coworkers about the README's **Agent instructions** section.
+7. Remove the "tap is not published yet" note from the README's **Install** section.
+8. Share the repo link with coworkers. The README's **Install** section has the steps, including **Set up your agents**.
