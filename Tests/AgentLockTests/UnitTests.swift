@@ -19,8 +19,24 @@ struct ConfigTests {
             == Config(slots: 2, dir: "/x"))
     }
 
-    @Test func invalidSlots() {
-        for bad in ["0", "-1", "three"] {
+    @Test func saveSlotsKeepsOtherLines() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let env = ["HOME": home]
+        // Creates the file when missing.
+        try Config.saveSlots(5, environment: env)
+        #expect(try Config.load(environment: env).slots == 5)
+
+        try "# my settings\ndir=~/locks\nslots=2\nSLOTS = 7\n".write(toFile: Config.filePath(environment: env), atomically: true, encoding: .utf8)
+        try Config.saveSlots(4, environment: env)
+        #expect(try String(contentsOfFile: Config.filePath(environment: env), encoding: .utf8) == "# my settings\ndir=~/locks\nslots=4\n")
+        #expect(try Config.load(environment: env) == Config(slots: 4, dir: home + "/locks"))
+        #expect(throws: ConfigError.self) { try Config.saveSlots(Config.maxSlots + 1, environment: env) }
+    }
+
+    @Test func invalidSlots() throws {
+        #expect(try Config.load(environment: ["HOME": "/h", "AGENT_LOCK_SLOTS": "16"]).slots == 16)
+        for bad in ["0", "-1", "three", "17"] {
             #expect(throws: ConfigError.self) { try Config.load(environment: ["HOME": "/h", "AGENT_LOCK_SLOTS": bad]) }
         }
     }

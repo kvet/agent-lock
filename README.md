@@ -110,7 +110,7 @@ A job started by the older Perl version of `agent-lock` shows up as a plain stri
 
 | Setting | Environment variable | Config file key | Default |
 |---|---|---|---|
-| Slot count (N) | `AGENT_LOCK_SLOTS` | `slots` | `3` |
+| Slot count (N), 1–16 | `AGENT_LOCK_SLOTS` | `slots` | `3` |
 | State directory | `AGENT_LOCK_DIR` | `dir` | `~/.claude/state/agent-lock` |
 
 The config file is `~/.config/agent-lock/config`, with `key=value` lines:
@@ -122,7 +122,12 @@ dir=~/.cache/agent-lock
 
 Environment variables take precedence over the file.
 
-> **Every process on the machine must agree on the slot count and directory.** Agents, terminals and the menu bar app all need the same values, so prefer the config file over per-shell environment variables. Changing the slot count while jobs are running is unsupported: finish or stop running jobs first.
+The easiest way to change the slot count is the menu bar's **Slots** submenu, which writes the config file. Each job reads the count when it starts, so the change applies to jobs started afterwards. It's safe to change while jobs run:
+
+- After lowering it, jobs already on higher slots finish normally. Until they do, more jobs than the new count can be running.
+- Exclusive jobs lock all 16 possible slots, so they never overlap a shared job, whatever slot count that job read.
+
+> **Every process on the machine must use the same state directory**, and should use the same slot count. Prefer the config file over per-shell environment variables, which agents started elsewhere don't see. The old Perl script always uses 3 slots: while jobs started by it are still running, keep the count at 3, or the menu bar will warn you.
 
 ## Menu bar
 
@@ -131,6 +136,7 @@ Environment variables take precedence over the file.
 - an icon only when idle, `2/3` when 2 of 3 slots are in use, `+4` when 4 jobs are waiting, and a lock icon while an exclusive job runs;
 - a **Running** section and a **Queued** section (head of the line first, marked `NEXT`), each job showing its description (or command), its `--uses` tags, directory and elapsed time;
 - per job: Copy Command, Copy PID, Reveal cwd in Finder, Terminate (SIGTERM to the wrapper, after confirmation);
+- **Slots** submenu to change the slot count (1–8 in the menu, up to 16 in the config file);
 - Open State Folder, version and Quit.
 
 It polls the state directory every 2 seconds (every second while the menu is open). Quit stays quit until the next login or `brew services restart agent-lock`. If the app crashes, `brew services` restarts it.

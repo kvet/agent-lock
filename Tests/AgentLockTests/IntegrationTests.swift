@@ -45,6 +45,38 @@ struct IntegrationTests {
         }
     }
 
+    /// Lowering the slot count while jobs run: an exclusive job started with the new, smaller
+    /// count must still wait for shared jobs holding slots above it.
+    @Test func shrinkingSlotsWhileJobsRun() async throws {
+        let h = try Harness(slots: 3)
+        let shared = try (1...3).map { try h.spawn("shared", h.loggedJob("s\($0)", sleep: 1.0)) }
+        try await h.waitUntil("3 holders") { h.snapshot().running.count == 3 }
+
+        let small = Config(slots: 2, dir: h.stateDir)
+        let s = StateReader(config: small).snapshot()
+        #expect(s.running.count == 3, "a reader with fewer slots still sees every holder")
+        #expect(s.slotsInUse == 3)
+
+        let x = try h.spawn("exclusive", h.loggedJob("X", sleep: 0.3), env: ["AGENT_LOCK_SLOTS": "2"])
+        for j in shared + [x] { #expect(try await h.waitExit(j) == 0) }
+        #expect(replay(h.logLines()).overlaps["X", default: []].isEmpty)
+    }
+
+    /// Raising the slot count while an exclusive job runs: a shared job started with the new,
+    /// larger count must not slip in next to it on a slot the exclusive job didn't know about.
+    @Test func growingSlotsWhileExclusiveRuns() async throws {
+        let h = try Harness(slots: 2)
+        let x = try h.spawn("exclusive", h.loggedJob("X", sleep: 1.0))
+        try await h.waitUntil("exclusive running") { h.logLines().contains("+ X") }
+        let s = h.snapshot()
+        #expect(s.running.count == 1)
+        #expect(s.slotsInUse == 2, "an exclusive job counts as N in use, not as every slot file it locks")
+
+        let late = try h.spawn("shared", h.loggedJob("s", sleep: 0.1), env: ["AGENT_LOCK_SLOTS": "4"])
+        for j in [x, late] { #expect(try await h.waitExit(j) == 0) }
+        #expect(replay(h.logLines()).overlaps["X", default: []].isEmpty)
+    }
+
     @Test func killNineReleasesSlot() async throws {
         let h = try Harness(slots: 1)
         let childPidFile = h.root + "/child.pid"

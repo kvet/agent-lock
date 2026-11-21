@@ -8,4 +8,5 @@
 - `status --json`, `queued:` lines in `status`, `version`.
 - Configuration via `AGENT_LOCK_SLOTS` / `AGENT_LOCK_DIR` or `~/.config/agent-lock/config`.
 - `--desc` and `--uses` (e.g. `--uses docker`): optional, informational job description and resource tags.
+- Slot count can be changed while jobs run (exclusive jobs lock all 16 possible slots); max 16. Menu bar **Slots** submenu writes it to the config file.
 - `agent-lock menubar`: macOS menu bar app showing running and queued jobs.

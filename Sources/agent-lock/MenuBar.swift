@@ -22,8 +22,12 @@ func runMenuBar(config: Config) -> Never {
 }
 
 final class MenuBarController: NSObject, NSMenuDelegate {
-    private let reader: StateReader
-    private let config: Config
+    /// Re-read on every refresh, so slot count changes (from the menu or the config file)
+    /// show up. The state directory stays the one the app started with.
+    private var config: Config
+    private var reader: StateReader { StateReader(config: config) }
+    /// AGENT_LOCK_SLOTS in our environment overrides the config file, so the menu can't change it.
+    private let slotsFromEnvironment = !(ProcessInfo.processInfo.environment["AGENT_LOCK_SLOTS"] ?? "").isEmpty
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
     private var timer: Timer?
@@ -36,7 +40,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     init(config: Config) {
         self.config = config
-        self.reader = StateReader(config: config)
         super.init()
     }
 
@@ -64,6 +67,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     private func refresh() {
+        if let fresh = try? Config.load() { config.slots = fresh.slots }
         let m = MenuModel(snapshot: reader.snapshot(), now: nowMillis())
         model = m
         guard let button = statusItem.button else { return }
@@ -131,12 +135,34 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         for job in m.queued { menu.addItem(jobItem(job)) }
 
         menu.addItem(.separator())
-        menu.addItem(placeholder("Slots: \(m.slots)"))
+        menu.addItem(slotsItem(current: m.slots))
         menu.addItem(actionItem("Open State Folder", #selector(openStateFolder), job: nil))
         menu.addItem(placeholder("agent-lock \(AgentLock.version)"))
         let quit = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
+    }
+
+    private func slotsItem(current: Int) -> NSMenuItem {
+        let item = NSMenuItem(title: "Slots: \(current)", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        sub.autoenablesItems = false
+        var choices = Array(1...8)
+        if !choices.contains(current) { choices.append(current) }
+        for n in choices {
+            let choice = NSMenuItem(title: String(n), action: #selector(setSlots(_:)), keyEquivalent: "")
+            choice.target = self
+            choice.tag = n
+            choice.state = n == current ? .on : .off
+            choice.isEnabled = !slotsFromEnvironment
+            sub.addItem(choice)
+        }
+        sub.addItem(.separator())
+        sub.addItem(placeholder(slotsFromEnvironment
+            ? "Set by AGENT_LOCK_SLOTS; change it there"
+            : "Applies to jobs started from now on"))
+        item.submenu = sub
+        return item
     }
 
     private func header(_ title: String) -> NSMenuItem {
@@ -257,6 +283,41 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             err.runModal()
         }
         refresh()
+    }
+
+    @objc private func setSlots(_ sender: NSMenuItem) {
+        let n = sender.tag
+        guard n != config.slots else { return }
+        // The Perl script always uses slots 0-2 and doesn't know the rest of the protocol.
+        let snapshot = reader.snapshot()
+        let legacyActive = (snapshot.running + [snapshot.next].compactMap { $0 }).contains {
+            if case .legacy = $0 { return true } else { return false }
+        }
+        if legacyActive && n != Config.defaultSlots {
+            NSApp.activate(ignoringOtherApps: true)
+            let alert = NSAlert()
+            alert.messageText = "Old agent-lock jobs are running"
+            alert.informativeText = """
+                Jobs started by the old Perl agent-lock always use 3 slots. Until they finish, \
+                their exclusive jobs may overlap jobs on slots above 3.
+                """
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Change to \(n)")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+        do {
+            try Config.saveSlots(n)
+        } catch {
+            NSApp.activate(ignoringOtherApps: true)
+            let err = NSAlert()
+            err.messageText = "Could not save the slot count"
+            err.informativeText = "\(error)"
+            err.runModal()
+            return
+        }
+        refresh()
+        rebuildMenu()
     }
 
     @objc private func openStateFolder() {

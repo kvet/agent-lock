@@ -36,18 +36,35 @@ public struct StateReader {
 
     private func path(_ name: String) -> String { config.dir + "/" + name }
 
+    /// Slot indices to look at: 0..<N plus any higher `slot.<i>` file that exists, which a
+    /// job started with a larger slot count (before the count was lowered) may hold.
+    func slotIndices() -> [Int] {
+        var upper = config.slots
+        if let names = try? FileManager.default.contentsOfDirectory(atPath: config.dir) {
+            for name in names where name.hasPrefix("slot.") {
+                if let i = Int(name.dropFirst(5)), i >= 0, i < 1024 { upper = max(upper, i + 1) }
+            }
+        }
+        return Array(0..<upper)
+    }
+
     /// Holders of the slots, deduplicated by their info (an exclusive job writes the same
-    /// info into every slot), plus how many slots are held.
+    /// info into every slot it holds), plus how many slots are in use.
+    ///
+    /// `inUse` counts held slots below N, plus held slots at or above N whose holder is not
+    /// exclusive (leftovers from before the slot count was lowered). Exclusive jobs lock
+    /// slots up to `Config.maxSlots`, and those extra locks are not "in use" capacity.
     public func holders() -> (running: [JobInfo], inUse: Int) {
         var seen = Set<String>()
         var running = [JobInfo]()
         var inUse = 0
-        for i in 0..<config.slots {
+        for i in slotIndices() {
             let p = path(LockFiles.slotName(i))
             guard LockFiles.isHeld(p) else { continue }
-            inUse += 1
             let raw = LockFiles.readInfo(path: p)
-            guard let info = JobInfo.parse(raw), seen.insert(raw).inserted else { continue }
+            let info = JobInfo.parse(raw)
+            if i < config.slots || (info != nil && info?.mode != .exclusive) { inUse += 1 }
+            guard let info, seen.insert(raw).inserted else { continue }
             running.append(info)
         }
         return (running, inUse)

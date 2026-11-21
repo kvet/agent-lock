@@ -79,7 +79,11 @@ public final class Wrapper {
         var held = [Int32]()
         switch mode {
         case .exclusive:
-            for i in 0..<config.slots {
+            // Lock every possible slot (not just 0..<N), in ascending order, so an exclusive
+            // job also excludes shared jobs that read a different slot count: ones started
+            // before the count was lowered, or after it was raised.
+            let upper = max(Config.maxSlots, StateReader(config: config).slotIndices().count)
+            for i in 0..<upper {
                 let fd = openLockOrDie(LockFiles.slotName(i))
                 if !LockFiles.tryLock(fd, LOCK_EX) {
                     noteWaiting()
