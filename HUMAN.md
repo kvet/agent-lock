@@ -3,7 +3,7 @@
 ## Now
 
 - [ ] **Check the menu bar app by hand.** It's running from `~/.claude/bin/agent-lock`.
-  - Start jobs in a few terminals, e.g. `agent-lock shared --desc "test" --uses docker -- sleep 60` and `agent-lock exclusive -- sleep 20`. Within about 2 s the title shows counts like `2/3 +1`, and an orange lock appears during the exclusive job.
+  - Start jobs in a few terminals, e.g. `agent-lock shared --desc "test" --uses docker -- sleep 60` and `agent-lock exclusive -- sleep 20`. Within about 2 s the title shows counts like `2/3 +1`, and the icon turns into a lock during the exclusive job, in the same colour as other menu bar icons.
   - `kill -9` a wrapper pid from `agent-lock status`. The menu bar updates.
   - In a job's submenu, check that Terminate (after confirming), Copy Command, Copy PID and Reveal cwd each work.
 - [ ] **Check CI is green:** https://github.com/kvet/agent-lock/actions

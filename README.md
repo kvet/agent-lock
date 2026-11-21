@@ -128,7 +128,7 @@ Environment variables take precedence over the file.
 
 `brew services start agent-lock` adds a status item:
 
-- an icon only when idle, `2/3` when 2 of 3 slots are in use, `+4` when 4 jobs are waiting, and an orange lock while an exclusive job runs;
+- an icon only when idle, `2/3` when 2 of 3 slots are in use, `+4` when 4 jobs are waiting, and a lock icon while an exclusive job runs;
 - a **Running** section and a **Queued** section (head of the line first, marked `NEXT`), each job showing its description (or command), its `--uses` tags, directory and elapsed time;
 - per job: Copy Command, Copy PID, Reveal cwd in Finder, Terminate (SIGTERM to the wrapper, after confirmation);
 - Open State Folder, version and Quit.

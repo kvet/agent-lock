@@ -29,7 +29,7 @@ public struct MenuModel: Equatable {
     }
 
     public var symbolName: String
-    /// Tinted when an exclusive job is running.
+    /// True when an exclusive job is running (the title then uses `exclusiveSymbol`).
     public var exclusiveRunning: Bool
     /// "" when idle, otherwise "2/3", plus " +4" when jobs are waiting.
     public var title: String

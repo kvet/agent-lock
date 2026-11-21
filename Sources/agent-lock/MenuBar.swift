@@ -76,7 +76,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         button.image = image
         button.imagePosition = m.title.isEmpty ? .imageOnly : .imageLeading
         button.title = m.title.isEmpty ? "" : " " + m.title
-        button.contentTintColor = m.exclusiveRunning ? .systemOrange : nil
+        // No tint: a tinted status item loses the menu bar's automatic light/dark styling
+        // (it renders black on a dark menu bar). The lock symbol marks exclusive runs.
+        button.contentTintColor = nil
     }
 
     // MARK: NSMenuDelegate
