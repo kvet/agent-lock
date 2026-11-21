@@ -67,8 +67,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let m = MenuModel(snapshot: reader.snapshot(), now: nowMillis())
         model = m
         guard let button = statusItem.button else { return }
-        let image = NSImage(systemSymbolName: m.symbolName, accessibilityDescription: "agent-lock")
-            ?? NSImage(systemSymbolName: MenuModel.busySymbol, accessibilityDescription: "agent-lock")
+        // The default symbol size (~13 pt) looks small next to other status items; 16 pt matches them.
+        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+        let image = (NSImage(systemSymbolName: m.symbolName, accessibilityDescription: "agent-lock")
+            ?? NSImage(systemSymbolName: MenuModel.busySymbol, accessibilityDescription: "agent-lock"))?
+            .withSymbolConfiguration(config)
         image?.isTemplate = true
         button.image = image
         button.imagePosition = m.title.isEmpty ? .imageOnly : .imageLeading
