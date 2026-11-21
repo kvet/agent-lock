@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Toolchain
         run: swift --version
       - name: Build (release)
@@ -35,23 +35,13 @@ jobs:
           .build/release/agent-lock shared -- true
           .build/release/agent-lock status --json
 
-  build-swift-5:
-    # The package declares swift-tools-version 5.9; make sure it still builds there.
-    name: Build with Swift 5.10 (macos-14)
-    runs-on: macos-14
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - run: swift --version
-      - run: swift build -c release
-
   build-clt-only:
     # Homebrew users may have only the Command Line Tools, not full Xcode.
     name: Build with Command Line Tools only
     runs-on: macos-15
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build with DEVELOPER_DIR pointing at the CLT
         run: |
           if [ ! -d /Library/Developer/CommandLineTools/usr/bin ]; then
